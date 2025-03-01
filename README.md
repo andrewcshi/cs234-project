@@ -21,3 +21,11 @@ pip install Cython
 python setup.py build
 python setup.py install
 ```
+
+### Training
+
+To train the model, run the following command.
+
+```bash
+./run_training.sh
+```
