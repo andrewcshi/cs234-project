@@ -1,5 +1,3 @@
-# agent.py
-
 import numpy as np
 from numpy.linalg import norm
 
@@ -70,7 +68,6 @@ class Agent:
         """Get goal position as a tuple."""
         return self.gx, self.gy
 
-
 class Obstacle(Agent):
     """Static obstacle agent that doesn't move."""
     
@@ -85,7 +82,6 @@ class Obstacle(Agent):
     def step(self, action=None):
         """Obstacles don't move, so override step to do nothing."""
         pass
-
 
 class Robot(Agent):
     """Robot agent controlled by the learning algorithm."""

@@ -2,7 +2,7 @@ __pycache__/
 
 venv/
 figures/
-figures2/
 weights/
-weights2/
 rvo2/
+logs/
+evaluation/
