@@ -1,6 +1,9 @@
 import numpy as np
 from numpy.linalg import norm
 
+GLOBAL_SEED = 1
+np.random.seed(GLOBAL_SEED)
+
 class Agent:
     """Base class for all agents in the simulation."""
     

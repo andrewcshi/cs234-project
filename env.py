@@ -8,12 +8,22 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
 
+GLOBAL_SEED = 1
+np.random.seed(GLOBAL_SEED)
+torch.manual_seed(GLOBAL_SEED)
+
 class ObstacleEnv:
     """
     Environment for robot navigation around static obstacles.
     Uses RVO2 library for collision avoidance simulation.
     """
-    def __init__(self):
+    def __init__(self, reward_goal=20.0, penalty_discomfort_factor=-5.0, penalty_timeout=0.0, penalty_collision=-10.0):
+
+        self.reward_goal = reward_goal
+        self.penalty_discomfort_factor = penalty_discomfort_factor
+        self.penalty_timeout = penalty_timeout
+        self.penalty_collision = penalty_collision
+        
         # Environment parameters
         self.obstacle_list = []
         self.circle_radius = 4.0
@@ -219,24 +229,27 @@ class ObstacleEnv:
         self.dg = current_dg
 
         # Determine reward and completion status
+
+        #completed/terminating episode
         if self.sim_time >= self.time_out_duration:
-            reward = 0
+            reward = self.penalty_timeout
             done = True
             info = "timeout"
-        elif d_min < 0:
-            reward = -10
+        elif d_min < 0:  # Collision
+            reward = self.penalty_collision
             done = True
             info = "collision"
-        elif d_min < self.discomfort_dist:
-            reward = 10 * (d_min - self.discomfort_dist)
-            done = False
-            info = "close"
         elif reaching_goal:
-            reward = 10
+            steps_remaining = self.time_out_duration - self.sim_time
+            reward = self.reward_goal + steps_remaining * 0.5
             done = True
             info = f"Goal reached, time {self.sim_time:.2f}"
+        elif d_min < self.discomfort_dist:
+            reward = self.penalty_discomfort_factor * (self.discomfort_dist - d_min)
+            done = False
+            info = "close"
         else:
-            reward = delta_d
+            reward = delta_d  # Reward for progress toward the goal
             done = False
             info = "Moving"
 

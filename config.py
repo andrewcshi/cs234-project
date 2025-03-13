@@ -8,13 +8,13 @@ TRAINING = {
     'eps_end': 0.1,                  # Minimum value of epsilon
     'initial_memory': 10000,         # Initial replay memory size before training starts
     'memory_size': 100000,           # Maximum replay memory size
-    'num_episodes': 500,             # Default number of episodes to train for
+    'num_episodes': 800,             # Default number of episodes to train for
     'update_frequency': 4,           # How often to update the network
     'save_frequency': 50,            # How often to save the model (in episodes)
-    'log_frequency': 1,              # How often to log training info (in episodes)
+    'log_frequency': 10,              # How often to log training info (in episodes)
     'plot_frequency': 10,            # How often to update plots (in episodes)
     'detailed_log_frequency': 10,    # How often to print detailed stats (in episodes)
-    'terminal_output_frequency': 5,  # How often to print directly to terminal (in episodes)
+    'terminal_output_frequency': 10,  # How often to print directly to terminal (in episodes)
     'progress_bar_length': 30,       # Length of the progress bar in characters
 }
 

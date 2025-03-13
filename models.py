@@ -2,6 +2,9 @@ import torch
 from torch import nn
 from config import MODEL
 
+GLOBAL_SEED = 42
+torch.manual_seed(GLOBAL_SEED)
+
 class BaseNetwork(nn.Module):
     """Base class for all network architectures."""
     def __init__(self, robot_dim, obstacle_dim, hidden_dim, num_actions):

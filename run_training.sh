@@ -1,5 +1,5 @@
 #!/bin/bash
-# Full training script for obstacle avoidance with both LSTM and Transformer models
+# Evaluation script for obstacle avoidance with both LSTM and Transformer models
 
 # Function to print fancy headers
 print_header() {
@@ -10,51 +10,41 @@ print_header() {
     echo
 }
 
-# Default number of episodes
-EPISODES=500
+# Evaluation parameters
+EPISODES=500  # Training episodes before evaluation
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --episodes)
-      EPISODES="$2"
-      shift 2
-      ;;
-    --model)
-      MODEL="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1"
-      echo "Usage: ./run_training.sh [--episodes NUM] [--model lstm|transformer|both]"
-      exit 1
-      ;;
-  esac
+# Reward configurations
+GOALS=(10 20 30)
+DISCOMFORTS=(0 -5 -10)
+TIMEOUTS=(0 -5 -10)
+COLLISIONS=(-10)
+
+# Run evaluation for each reward configuration
+print_header "Running Evaluation On Trained Models"
+for GOAL in "${GOALS[@]}"; do
+    for DISCOMFORT in "${DISCOMFORTS[@]}"; do
+        for TIMEOUT in "${TIMEOUTS[@]}"; do
+            for COLLISION in "${COLLISIONS[@]}"; do
+                REWARD_SET="--reward_goal $GOAL --penalty_discomfort_factor $DISCOMFORT --penalty_timeout $TIMEOUT --penalty_collision $COLLISION"
+                REWARD_NAME="goal_${GOAL}_discomfort_${DISCOMFORT}_timeout_${TIMEOUT}_collision_${COLLISION}"
+
+                for MODEL in "lstm" "transformer"; do
+                    print_header "Training $(echo $MODEL | tr '[:lower:]' '[:upper:]') model with $REWARD_NAME"
+                    
+                    python -u train.py --model $MODEL --episodes $EPISODES $REWARD_SET
+                done
+
+                print_header "Evaluating with $REWARD_NAME"
+
+                python evaluate.py \
+                  --lstm-episode $((EPISODES - 1)) \
+                  --transformer-episode $((EPISODES - 1)) \
+                  --eval-episodes 100 \
+                  --render-every 10 \
+                  $REWARD_SET
+            done
+        done
+    done
 done
 
-# Create necessary directories
-mkdir -p weights/lstm weights/transformer figures logs evaluation
-
-# Set timestamp for this run
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-print_header "Starting Training Run: ${TIMESTAMP}"
-
-# Run the experiment(s)
-if [ -z "$MODEL" ] || [ "$MODEL" = "both" ]; then
-  print_header "Training both LSTM and Transformer models (${EPISODES} episodes each)"
-  python run_experiments.py --models both --episodes ${EPISODES}
-elif [ "$MODEL" = "lstm" ]; then
-  print_header "Training LSTM model (${EPISODES} episodes)"
-  python run_experiments.py --models lstm --episodes ${EPISODES}
-elif [ "$MODEL" = "transformer" ]; then
-  print_header "Training Transformer model (${EPISODES} episodes)"
-  python run_experiments.py --models transformer --episodes ${EPISODES}
-else
-  echo "Invalid model: ${MODEL}"
-  echo "Must be 'lstm', 'transformer', or 'both'"
-  exit 1
-fi
-
-# Run evaluation after training
-print_header "Running Evaluation On Trained Models"
-python evaluate.py
+print_header "All Evaluation Complete"

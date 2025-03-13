@@ -7,18 +7,24 @@ from env import ObstacleEnv
 from models import LSTMNetwork, TransformerNetwork
 from config import MODEL, ENVIRONMENT, PATHS
 
+GLOBAL_SEED = 1
+np.random.seed(GLOBAL_SEED)
+torch.manual_seed(GLOBAL_SEED)
+
 class Evaluator:
-    def __init__(self, model_path, model_type, episode):
+    def __init__(self, model_path, model_type, episode, reward_identifier):
         self.model_path = model_path
         self.model_type = model_type
         self.episode = episode
+        self.reward_identifier = reward_identifier
         self.env = ObstacleEnv()
         
         # Load the model
         self.model = self.load_model()
         
         # Output directory
-        os.makedirs(PATHS['eval_path'], exist_ok=True)
+        self.eval_path = os.path.join(PATHS['eval_path'], reward_identifier)
+        os.makedirs(self.eval_path, exist_ok=True)
     
     def load_model(self):
         """Load the trained model."""
@@ -147,7 +153,7 @@ class Evaluator:
         
         return results
     
-    def plot_results(self, results):
+    def plot_results(self, results, reward_identifier):
         """Plot evaluation results with improved styling."""
         plt.style.use('ggplot')
         plt.figure(figsize=(12, 8))
@@ -224,7 +230,7 @@ class Evaluator:
         
         # Save figure
         plt.tight_layout()
-        plt.savefig(f"{PATHS['eval_path']}/{self.model_type}_eval_results.png", dpi=150)
+        plt.savefig(f"{PATHS['eval_path']}/{self.model_type}_{reward_identifier}_eval_results.png", dpi=150)
         plt.close()
         plt.close()
 
@@ -320,23 +326,36 @@ def main():
     parser.add_argument('--transformer-episode', type=int, default=499, help='Transformer model episode to evaluate')
     parser.add_argument('--eval-episodes', type=int, default=100, help='Number of evaluation episodes')
     parser.add_argument('--render-every', type=int, default=0, help='Render every N episodes (0 to disable)')
+    # Reward Values
+    parser.add_argument('--reward-goal', type=float, default=20.0, 
+                        help='Reward for reaching the goal')
+    parser.add_argument('--penalty-discomfort-factor', type=float, default=1.0, 
+                        help='Reward for each step closer to the goal')
+    parser.add_argument('--penalty-timeout', type=float, default=0.0, 
+                        help='Penalty for timeout')
+    parser.add_argument('--penalty-collision', type=float, default=-10.0, 
+                        help='Penalty for collisions')
+
     args = parser.parse_args()
+
+    # Create unique path based on reward structure
+    reward_identifier = f"goal_{args.reward_goal}_discomfort_{args.penalty_discomfort_factor}_timeout_{args.penalty_timeout}_collision_{args.penalty_collision}"
     
-    # Paths
-    lstm_path = f"{PATHS['base_model_path']}/lstm/"
-    transformer_path = f"{PATHS['base_model_path']}/transformer/"
-    
+    # Paths for evaluation
+    lstm_path = f"{PATHS['base_model_path']}/lstm/{reward_identifier}"
+    transformer_path = f"{PATHS['base_model_path']}/transformer/{reward_identifier}"
+
     # Evaluate LSTM model
     print("\nEvaluating LSTM model...")
-    lstm_evaluator = Evaluator(lstm_path, "lstm", args.lstm_episode)
+    lstm_evaluator = Evaluator(lstm_path, "lstm", args.lstm_episode, reward_identifier)
     lstm_results = lstm_evaluator.run_evaluation(args.eval_episodes, args.render_every)
-    lstm_evaluator.plot_results(lstm_results)
+    lstm_evaluator.plot_results(lstm_results, reward_identifier)
     
     # Evaluate Transformer model
     print("\nEvaluating Transformer model...")
-    transformer_evaluator = Evaluator(transformer_path, "transformer", args.transformer_episode)
+    transformer_evaluator = Evaluator(transformer_path, "transformer", args.transformer_episode, reward_identifier)
     transformer_results = transformer_evaluator.run_evaluation(args.eval_episodes, args.render_every)
-    transformer_evaluator.plot_results(transformer_results)
+    transformer_evaluator.plot_results(transformer_results, reward_identifier)
     
     # Compare models
     compare_models(lstm_results, transformer_results)

@@ -14,6 +14,18 @@ from IPython.display import clear_output
 import argparse
 from config import TRAINING, MODEL, ENVIRONMENT, PATHS
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import sys
+import os
+os.environ['PYTHONUNBUFFERED'] = "1"
+sys.stdout = sys.__stdout__  # Force unbuffered output
+
+GLOBAL_SEED = 1
+np.random.seed(GLOBAL_SEED)
+torch.manual_seed(GLOBAL_SEED)
+
 def setup_logger(model_type):
     """Set up a logger for the training process."""
     # Create log directory if it doesn't exist
@@ -36,7 +48,7 @@ def setup_logger(model_type):
     file_handler.setLevel(logging.INFO)
     
     # Create console handler
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     
     # Create formatter
@@ -95,7 +107,7 @@ def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, lengt
     print(f'\r{prefix} |{bar}| {percent}% {suffix}', end='', flush=True)
     # Print new line on complete
     if iteration == total:
-        print()
+        print(flush=True)
 
 def plot_stats(frame_idx, rewards, losses, step, model_type):
     """
@@ -318,6 +330,9 @@ class DQN:
         return loss
 
     def train(self, num_episodes=None):
+        print("Starting Training...", flush=True)
+        sys.stdout.flush()
+
         """Main training loop."""
         if num_episodes is None:
             num_episodes = TRAINING['num_episodes']
@@ -340,10 +355,12 @@ class DQN:
         self.logger.info(f"Starting training for {num_episodes} episodes")
         
         # Print initial progress bar
-        print_progress_bar(0, num_episodes, prefix=f'{self.model_type.upper()} Progress:', 
-                          suffix='Starting...', length=TRAINING['progress_bar_length'])
+        #print_progress_bar(0, num_episodes, prefix=f'{self.model_type.upper()} Progress:', suffix='Starting...', length=TRAINING['progress_bar_length'])
         
         for episode in range(num_episodes):
+            #print("Episode:" + str(episode), flush=True)
+            sys.stdout.flush()
+
             episode_start_time = time.time()
             
             # Reset environment with obstacles
@@ -383,6 +400,13 @@ class DQN:
                     if loss is not None:
                         losses.append(loss.item())
 
+                #start training immediately 
+
+                
+                #else: 
+                    #if max(len(self.replay_buffer), len(self.replay_buffer_b)) % 1000 == 0:
+                        #print("collecting initial memory... " + str(max(len(self.replay_buffer), len(self.replay_buffer_b))) + "/" + str(self.initial_memory), flush=True)
+
                 # Log when training begins
                 if max(len(self.replay_buffer), len(self.replay_buffer_b)) >= self.initial_memory and not self.first:
                     self.logger.info(f"Starting learning from buffer after {steps_done} steps")
@@ -413,8 +437,7 @@ class DQN:
                     # Update progress bar
                     avg_reward = np.mean(rewards_list[-10:]) if len(rewards_list) >= 10 else np.mean(rewards_list)
                     progress_suffix = f'Ep: {episode+1}/{num_episodes} | Reward: {reward_for_episode:.2f} | Avg: {avg_reward:.2f}'
-                    print_progress_bar(episode+1, num_episodes, prefix=f'{self.model_type.upper()} Progress:',
-                                      suffix=progress_suffix, length=TRAINING['progress_bar_length'])
+                    #print_progress_bar(episode+1, num_episodes, prefix=f'{self.model_type.upper()} Progress:', suffix=progress_suffix, length=TRAINING['progress_bar_length'])
                     
                     # Decide log level based on frequency
                     if episode % TRAINING['log_frequency'] == 0:
@@ -434,19 +457,20 @@ class DQN:
                         avg_steps = np.mean(episode_steps_list[-10:]) if len(episode_steps_list) >= 10 else np.mean(episode_steps_list)
                         
                         # Clear the current line (progress bar will be redrawn)
-                        print("\r", end="")
+                        #print("\r", end="")
                         
                         # Print stats to terminal
-                        print(f"\n--- {self.model_type.upper()} Episode {episode+1}/{num_episodes} Stats ---")
-                        print(f"  Last reward: {reward_for_episode:.2f}, Avg reward: {avg_reward:.2f}")
-                        print(f"  Success: {success_rate:.1%}, Collision: {collision_rate:.1%}")
-                        print(f"  Epsilon: {epsilon:.4f}, Steps: {num_step_per_eps} (avg: {avg_steps:.1f})")
-                        print(f"  Memory: {len(self.replay_buffer)} main, {len(self.replay_buffer_b)} collision")
-                        print()
+                        #print(f"\n--- {self.model_type.upper()} Episode {episode+1}/{num_episodes} Stats ---", flush=True)
+                        #print(f"  Last reward: {reward_for_episode:.2f}, Avg reward: {avg_reward:.2f}", flush=True)
+                        #print(f"  Success: {success_rate:.1%}, Collision: {collision_rate:.1%}", flush=True)
+                        #print(f"  Epsilon: {epsilon:.4f}, Steps: {num_step_per_eps} (avg: {avg_steps:.1f})", flush=True)
+                        #print(f"  Memory: {len(self.replay_buffer)} main, {len(self.replay_buffer_b)} collision", flush=True)
+                        #print(flush=True)
                         
+                        #sys.stdout.flush()
+
                         # Redraw progress bar
-                        print_progress_bar(episode+1, num_episodes, prefix=f'{self.model_type.upper()} Progress:',
-                                          suffix=progress_suffix, length=TRAINING['progress_bar_length'])
+                        #print_progress_bar(episode+1, num_episodes, prefix=f'{self.model_type.upper()} Progress:', suffix=progress_suffix, length=TRAINING['progress_bar_length'])
                     
                     # Detailed logging at specified intervals
                     if episode > 0 and episode % TRAINING['detailed_log_frequency'] == 0:
@@ -481,8 +505,7 @@ class DQN:
                         # Print to terminal for visibility
                         print(f"\n[CHECKPOINT] Model saved at episode {episode+1}: {path}\n")
                         # Redraw progress bar
-                        print_progress_bar(episode+1, num_episodes, prefix=f'{self.model_type.upper()} Progress:',
-                                          suffix=progress_suffix, length=TRAINING['progress_bar_length'])
+                        #print_progress_bar(episode+1, num_episodes, prefix=f'{self.model_type.upper()} Progress:', suffix=progress_suffix, length=TRAINING['progress_bar_length'])
                     
                     break
         
@@ -493,7 +516,7 @@ class DQN:
         timeout_rate = timeout_count / num_episodes
         
         # Clear the progress bar line
-        print("\n")
+        #print("\n")
         
         # Print training summary to terminal
         print("\n" + "="*80)
@@ -539,16 +562,33 @@ def main():
                       help='Model architecture to use (lstm or transformer)')
     parser.add_argument('--episodes', type=int, default=TRAINING['num_episodes'],
                       help='Number of episodes to train')
+    parser.add_argument('--reward_goal', type=float, default=20.0, 
+                      help='Reward for reaching the goal')
+    parser.add_argument('--penalty_discomfort_factor', type=float, default=1.0, 
+                      help='Reward for each step closer to the goal')
+    parser.add_argument('--penalty_timeout', type=float, default=0.0, 
+                      help='Penalty for timeout')
+    parser.add_argument('--penalty_collision', type=float, default=-10.0, 
+                      help='Penalty for collisions')
+
     args = parser.parse_args()
     
     # Set up logger
     logger = setup_logger(args.model)
     
-    # Initialize environment
-    env = ObstacleEnv()
+    # Add the new values to the environment
+    env = ObstacleEnv(
+        reward_goal=args.reward_goal,
+        penalty_discomfort_factor=args.penalty_discomfort_factor,
+        penalty_timeout=args.penalty_timeout,
+        penalty_collision=args.penalty_collision
+    )
 
+    # Generate a unique identifier for this run based on reward values
+    reward_identifier = f"goal_{args.reward_goal}_discomfort_{args.penalty_discomfort_factor}_timeout_{args.penalty_timeout}_collision_{args.penalty_collision}"
+    
     # Set model path based on model type
-    model_path = f"{PATHS['base_model_path']}/{args.model}/"
+    model_path = f"{PATHS['base_model_path']}/{args.model}/{reward_identifier}"
     
     logger.info(f'Starting training with {args.model} model on obstacle environment for {args.episodes} episodes')
     
